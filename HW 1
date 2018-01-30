@@ -1,0 +1,97 @@
+library(RCurl)
+library(tidyverse)
+
+
+url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"
+mushroom <- getURL(url)
+
+mushroom_df <- read.csv(text = mushroom, header = F, sep = ',', stringsAsFactors = F)
+
+#rename columns
+mushroom_names <- c("class", "cap-shape", "cap-surface","cap-color", "bruises?", "odor", "gill-attachment",
+                    "gill-spacing", "gill-size", "gill-color", "stalk-shape" ,"stalk-root", "stalk-surface-above-ring",
+                    "stalk-surface-below-ring", "stalk-color-above-ring", "stalk-color-below-ring" ,"veil-type",
+                    "veil-color", "ring-number", "ring-type", "spore-print-color", "population", "habitat")
+
+colnames(mushroom_df) <- mushroom_names
+
+#rename class values
+i <- 1
+for (x in mushroom_df$class){
+  if (x == 'p'){
+    mushroom_df$class[i] <- "poisonous"
+  }else if (x == 'e'){
+    mushroom_df$class[i] <- "edible"
+  }
+  i <- i + 1
+  }
+
+#rename population values
+i <- 1
+for (x in mushroom_df$population){
+  if (x == 'a'){
+    mushroom_df$population[i] <- "abundant"
+  }else if (x == 'c'){
+    mushroom_df$population[i] <- "clustered"
+  }else if (x == 'n'){
+    mushroom_df$population[i] <- "numerous"
+  }else if (x == 's'){
+    mushroom_df$population[i] <- "scattered"
+  }else if (x == 'v'){
+    mushroom_df$population[i] <- "several"
+  }else if (x == 'y'){
+    mushroom_df$population[i] <- "solitary"
+  }
+  i <- i + 1
+}
+
+#rename habitat values
+i <- 1
+for (x in mushroom_df$habitat){
+  if (x == 'g'){
+    mushroom_df$habitat[i] <- "grasses"
+  }else if (x == 'l'){
+    mushroom_df$habitat[i] <- "leaves"
+  }else if (x == 'm'){
+    mushroom_df$habitat[i] <- "meadows"
+  }else if (x == 'p'){
+    mushroom_df$habitat[i] <- "paths"
+  }else if (x == 'u'){
+    mushroom_df$habitat[i] <- "urban"
+  }else if (x == 'w'){
+    mushroom_df$habitat[i] <- "waste"
+  }else if (x == 'd'){
+    mushroom_df$habitat[i] <- "woods"
+  }
+  i <- i + 1
+}
+
+
+#rename gill size values
+i <- 1
+for (x in mushroom_df$`gill-size`){
+  if (x == 'b'){
+    mushroom_df$`gill-size`[i] <- "broad"
+  }else if (x == 'n'){
+    mushroom_df$`gill-size`[i] <- "narrow"
+  }
+  i <- i + 1
+}
+
+  
+#create a subset and group by class
+mushroom_subset <- mushroom_df %>% group_by(class) %>% select(class, population, habitat, 'gill-size')
+
+head(mushroom_subset) 
+ 
+  
+ggplot(mushroom_subset, aes(mushroom_subset$habitat)) + geom_bar(aes(fill = mushroom_subset$class)) +
+  ggtitle("Mushrooms - Edible vs. Poisonous based on Habitat") +
+  xlab("Mushroom Habitat") +
+  ylab("Count") +
+  labs(fill = "Class") + 
+  geom_text(stat = "count", aes(label = ..count.., y = ..count..), vjust=-0.5) +
+  theme_dark()
+
+
+  
