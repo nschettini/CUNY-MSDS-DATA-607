@@ -11,7 +11,7 @@ VALUES
 (1, 'Nick'),
 (2, 'Amanda'),
 (3, 'Saverio'),
-(4, 'Matt'),
+(4, 'Shea'),
 (5, 'Haley');
 
 
@@ -33,11 +33,36 @@ VALUES
 
 -- create ratings table
 CREATE TABLE ratings (
-rating_id INT PRIMARY KEY
-raiting_score FLOAT NOT NULL
+user_id INT,
+movie_id INT,
+rating FLOAT,
 );
 
 -insert values into ratings table
-INSERT INTO ratings (rating_id, raiting_score)
+INSERT INTO ratings (user_id, movie_id, raiting)
 VALUES
-(1,
+(1, 1, '5'),
+(1, 2, '5'),
+(1, 3, '4.5'),
+(1, 4, '5'),
+(1, 5, '3.5'),
+(2, 1, '5'),
+(2, 2, '5'),
+(2, 3, '5'),
+(2, 4, '4'),
+(2, 5, '4'),
+(3, 1, '5'),
+(3, 2, '4'),
+(3, 3, '4'),
+(3, 4, '3'),
+(3, 5, '3'),
+(4, 1, '5'),
+(4, 2, '4'),
+(4, 3, '4'),
+(4, 4, '3'),
+(4, 5, '3'),
+(5, 1, '5'),
+(5, 2, '4.5'),
+(5, 3, '4'),
+(5, 4, '4.5'),
+(5, 5, '3');
