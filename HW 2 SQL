@@ -35,7 +35,7 @@ VALUES
 CREATE TABLE ratings (
 user_id INT,
 movie_id INT,
-rating FLOAT,
+rating FLOAT
 );
 
 -insert values into ratings table
