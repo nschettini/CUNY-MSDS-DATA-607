@@ -1,0 +1,43 @@
+
+-- create reviewrs table
+CREATE TABLE reviewers (
+user_id INT PRIMARY KEY,
+user_name VARCHAR(55) NOT NULL
+);
+
+-- insert data into reviewers table
+INSERT INTO reviewers (user_id, user_name)
+VALUES
+(1, 'Nick'),
+(2, 'Amanda'),
+(3, 'Saverio'),
+(4, 'Matt'),
+(5, 'Haley');
+
+
+-- create the movie table
+CREATE TABLE movies (
+movie_id INT PRIMARY KEY,
+movie_name VARCHAR(255) NOT NULL
+);
+
+--insert movie info
+INSERT INTO movies (movie_id, movie_name)
+VALUES
+(1, 'Star Wars: Empire Strikes Back'),
+(2, 'Star Wars: Return of the Jedi'),
+(3, 'Star Wars: The Force Awakens'),
+(4, 'Star Wars: Rogue One'),
+(5, 'Star Wars: The Last Jedi');
+
+
+-- create ratings table
+CREATE TABLE ratings (
+rating_id INT PRIMARY KEY
+raiting_score FLOAT NOT NULL
+);
+
+-insert values into ratings table
+INSERT INTO ratings (rating_id, raiting_score)
+VALUES
+(1,
