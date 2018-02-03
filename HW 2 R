@@ -1,0 +1,68 @@
+##Libraries
+```{r message=FALSE}
+library("RPostgreSQL")
+library("tidyverse")
+```
+
+##Connect to PostgreSQL Database
+```{r include=FALSE}
+pw<- {
+  "haley"
+}
+```
+```{r}
+drv <- dbDriver("PostgreSQL")
+# creates a connection to the postgres database
+con <- dbConnect(drv, dbname = "data606hw2",
+                 host = "localhost", port = 5432,
+                 user = "postgres", password = pw)
+
+dbListTables(con)
+```
+##Query to pull out some data
+```{r}
+query2 <- dbGetQuery(con, "SELECT * FROM movies")
+query3 <- dbGetQuery(con, "SELECT * FROM reviewers")
+
+query2
+query3
+```
+
+##Query to see our data
+```{r}
+query1 <- dbGetQuery(con, "SELECT * FROM movies
+                     LEFT JOIN ratings
+                     on movies.movie_id = ratings.movie_id")
+query1
+```
+
+##Data Visualization 
+
+###Box Plot
+```{r}
+ggplot(query1, aes(query1$movie_name, query1$rating)) + 
+  geom_boxplot(aes(fill = query1$movie_name)) +
+  coord_flip() + theme_dark() + 
+  xlab("Rating") + ylab("Movie Title") + 
+  ggtitle("Movie vs. Rating") + 
+  labs(fill="Movie Name by color")
+```
+
+###Line/scatter Plot
+```{r}
+ggplot(query1, aes(query1$movie_id, query1$rating)) + geom_smooth(se = F, method = lm) +
+  geom_vline(xintercept=median(query1$rating), col='orange') +
+  geom_vline(xintercept=mean(query1$rating), col='red') +
+  xlab("Movie ID") +
+  ylab("Raiting") +
+  ggtitle("Star Wars: 4-9 Movie Raitings") +
+  theme_dark() +
+  geom_point(aes(color = query1$movie_name)) 
+```
+\ 
+
+Mean = red\ 
+Median = orange
+
+
+
