@@ -1,0 +1,519 @@
+Project 3 Group 6
+March 25, 2018
+Task
+W. Edwards Deming said, “In God we trust, all others must bring data.” Please use data to answer the question, “Which are the most valued data science skills?” Consider your work as an exploration; there is not necessarily a “right answer.”
+
+Data Acquisition/Web Scraping:
+We used data from indeed to build a file with many job postings. Based on another groups’ experience, we were concerned about losing access to indeed if we take too much data. Each step is turned on and off separately so we don’t pull too much data from indeed. Data is immediately saved so it won’t be lost.
+
+In the end, we pulled 300 job listings each for searches in White Plains, NY and San Francisco, CA.
+
+First, we created a file with a search for the jobs we are interested in. Indeed creates a results page with 10 listings:
+
+data<-unlist(readLines('https://www.indeed.com/jobs?q=data+scientist&l=White+Plains%2C+NY&start=295'))
+write(data,file = "C:/Users/dawig/Desktop/web_scrapings/file10")
+Then, we used the tags found on the results page labeled “jk” for 10 jobs that indeed would display. We could change the results page by this tag and pull up the web page for each of the jobs.
+
+On the page for each job, we throw out the data unrelated to the posting, which started with the tags:
+
+job.beginning<-grep(“job_summary”,look.at.job.file) job.ending<-grep(“result-link-bar”, look.at.job.file)
+
+It all gets put into a single file for White Plains and a single file for San Francisco to be able to go on to our next step of data cleaning.
+
+#Get a page with 10 results of search for data scientist listing
+data<-unlist(readLines('https://www.indeed.com/jobs?q=data+scientist&l=White+Plains%2C+NY&start=295'))
+write(data,file = "C:/Users/dawig/Desktop/web_scrapings/file10")
+ Grabber for 10 postings
+#Use listing of 10 to pull jk codes that indeed uses to fetch jobs.
+library(stringr)
+#Instead of automating this step, we are choosing files with 10 tags individually--to not take too much from indeed.
+new.data <- readLines("C:/Users/dawig/Desktop/web_scrapings/file10")
+first.job <- grep("jobmap", new.data)
+first.job
+new.data[first.job[2]]
+job.code <- matrix(nrow = 10)
+for (i in 2:11) {
+  job.code[i - 1] <-
+    unlist(str_extract(new.data[first.job[i]], "[:alnum:]{16}"))
+}
+#Use job codes to pull data files with individual jobs
+for (i in 1:10)     {
+  temp.code <- job.code[i]
+  url.single.job.posting <-
+    paste("https://www.indeed.com/viewjob?jk=", temp.code, collapse = "")
+  url.single.job.posting <-
+    gsub(" ", "", url.single.job.posting, fixed = TRUE)
+  url.single.job.posting
+  single.job.posting <- readLines(url.single.job.posting)
+  write.to.file <- "C:/Users/dawig/Desktop/web_scrapings/jobfile"
+  job.file.writer <- paste(write.to.file, i)
+  job.file.writer <- gsub(" ", "", job.file.writer, fixed = TRUE)
+  write(single.job.posting, file = job.file.writer)
+}
+ Processor for 10 postings-appends to end of cleanjobfiles
+#Get names for job files to pull
+job.file.opener <- "C:/Users/dawig/Desktop/web_scrapings/jobfile"
+job.file.matrix <- matrix(nrow = 10)
+for (i in 1:10) {
+  job.file.matrix[i] <- paste(job.file.opener, i)
+}
+job.file.matrix <- gsub(" ", "", job.file.matrix, fixed = TRUE)
+
+#Pull job files, clean them, append them to a single file
+for (i in 1:10)     {
+  look.at.job.file <- readLines(job.file.matrix[i])
+  job.beginning <- grep("job_summary", look.at.job.file)
+  job.ending <- grep("result-link-bar", look.at.job.file)
+  small.job.posting <-
+    (look.at.job.file[job.beginning[1]:job.ending[1]])
+  write(small.job.posting, file = "C:/Users/dawig/Desktop/web_scrapings/cleanjobfiles", append =
+          TRUE)
+}
+Data Cleaning/Tidying
+The data from Indeed was scraped into .txt files. The .txt files had to be loaded into R, cleaned, tidied, and transformed into useful data sets. After looking at many of the job postings on Indeed, as well as the HTML code in the text files, it was determined that most of the job postings had two distinct sections: one we dubbed “briefing” and the other “requirements.”
+
+Each job posting, would have to be split on a particular character string. In most cases, this was the beginning of an unordered list, or “
+" tag. We called everything before the first “
+" tag the “briefing”. This is typically where most job postings would contain brief or summary information about the company and/or role. We wanted to exclude any keyword hits from our keyword counts from this section as this section typically is not used to present the functional requirements/skills for the role.
+
+The requirements section would be everything after the first “
+" tag. This is where we used the stringr package and its host of string matching functions, combined with RegEx, to find how many times keywords appeared within a job posting. The group came up with a list of about 100 keywords that came to mind when we thought about Data Science. These keywords encompassed words that many of us were already familiar with and attribute to Data Science, some were from scanning various job postings, and other’s came from a Glassdoor article they published on data science skills.
+
+Two datasets were created from searching for the keywords. One maintained a “columnar” format, where every column was a keyword and contained the count, and every row represented a different job posting. The other dataset was a summary dataset that contained one keyword per row, and a summation of the count attributed to that keyword across job postings.
+
+Load Dataset
+plainText <- getURL("https://raw.githubusercontent.com/baroncurtin2/data607-project3/master/data/cleanjobfiles.txt") %>%
+  read_lines %>%
+  paste(collapse = " ")
+
+sf_plainText <- getURL("https://raw.githubusercontent.com/baroncurtin2/data607-project3/master/data/sf_cleanjobfiles.txt") %>%
+  read_lines %>%
+  paste(collapse = " ")
+
+searchTerms <- getURL("https://raw.githubusercontent.com/baroncurtin2/data607-project3/master/data/searchterms.csv") %>%
+  read_csv(col_names = FALSE, trim_ws = TRUE) %>%
+  # remove newline
+  mutate(X1 = str_replace_all(X1, "\\n", "")) %>%
+  # convert to vector
+  pull(1)
+Convert Massive Text String to Vector to Data Frame
+The objective here is to attempt to create a “regular” dataset
+Key characteristics will be one job posting per row
+jobPostings <- plainText %>%
+  # extract all instances of span tag
+  str_extract_all('(<span id=(.*?)>)(.*?)(</span>)') %>%
+  # unnest the list
+  unlist %>%
+  # convert to data frame
+  data_frame(jobPost = .)
+
+sf_jobPostings <- sf_plainText %>%
+  # extract all instances of span tag
+  str_extract_all('(<span id=(.*?)>)(.*?)(</span>)') %>%
+  # unnest the list
+  unlist %>%
+  # convert to data frame
+  data_frame(jobPost = .)
+
+# SEARCH TERMS OPERATIONS
+# helper function
+returnZero <- function(x) 0
+
+# create empty data frame
+termsDf <- data.frame(matrix(nrow = NROW(jobPostings), ncol = length(searchTerms)))
+# give dataframe column names
+colnames(termsDf) <- searchTerms
+# mutate rows so they are all the column name
+termsDf %<>%
+  mutate_all(funs(returnZero(.)))
+
+sf_termsDf <- data.frame(matrix(nrow = NROW(sf_jobPostings), ncol = length(searchTerms)))
+# give dataframe column names
+colnames(sf_termsDf) <- searchTerms
+# mutate rows so they are all the column name
+sf_termsDf %<>%
+  mutate_all(funs(returnZero(.)))
+Data Cleaning
+The key objective here is to break up the singular column into multiple columns
+# helper function
+
+separateCols <- jobPostings %>%
+  # separate jobPost column into the "summary" and "requirements" of role
+  separate(col=jobPost, into=c("briefing", "requirements"), sep="<ul>|<li>", extra = "merge", fill="right") %>%
+  # convert to lowercase
+  mutate_at(vars(briefing:requirements), funs(str_to_lower))
+
+sf_separateCols <- sf_jobPostings %>%
+  # separate jobPost column into the "summary" and "requirements" of role
+  separate(col=jobPost, into=c("briefing", "requirements"), sep="<ul>|<li>", extra = "merge", fill="right") %>%
+  # convert to lowercase
+  mutate_at(vars(briefing:requirements), funs(str_to_lower))
+
+# add search term columns
+separateCols <- cbind(separateCols, termsDf)
+sf_separateCols <- cbind(sf_separateCols, sf_termsDf) 
+
+# dataset for non-NA
+nonNA <- separateCols %>%
+  # filter for non-NA
+  filter(!is.na(requirements))
+  #mutate_at(vars(ruby:visualization), funs())
+
+sf_nonNA <- sf_separateCols %>%
+  # filter for non-NA
+  filter(!is.na(requirements))
+  #mutate_at(vars(ruby:visualization), funs())
+
+# get counts of keywords
+for(i in 3:ncol(nonNA)) {
+  nonNA[, i] <- str_count(nonNA$requirements, str_c(c("([^[:alpha:]]", "[[:punct:][:blank:]]?", colnames(nonNA)[i], "[[:punct:][:blank:]]{1})"), collapse = ""))
+}
+for(i in 3:ncol(sf_nonNA)) {
+  sf_nonNA[, i] <- str_count(sf_nonNA$requirements, str_c(c("([^[:alpha:]]", "[[:punct:][:blank:]]?", colnames(sf_nonNA)[i], "[[:punct:][:blank:]]{1})"), collapse = ""))
+}
+
+# dataset for NA
+dataNA <- separateCols %>%
+  # filter for non-NA
+  filter(is.na(requirements))
+sf_dataNA <- sf_separateCols %>%
+  # filter for non-NA
+  filter(is.na(requirements))
+
+# get counts of keywords
+for(i in 3:ncol(dataNA)) {
+  dataNA[, i] <- str_count(dataNA$briefing, str_c(c("([^[:alpha:]]", "[[:punct:][:blank:]]?", colnames(dataNA)[i], "[[:punct:][:blank:]]{1})"), collapse = ""))
+}
+for(i in 3:ncol(sf_dataNA)) {
+  sf_dataNA[, i] <- str_count(sf_dataNA$briefing, str_c(c("([^[:alpha:]]", "[[:punct:][:blank:]]?", colnames(sf_dataNA)[i], "[[:punct:][:blank:]]{1})"), collapse = ""))
+}
+
+# bind rows of NA and nonNA
+jobPostings <- bind_rows(nonNA, dataNA)
+sf_jobPostings <- bind_rows(sf_nonNA, sf_dataNA)
+
+# create keyword summary
+keywordSummary <- jobPostings %>%
+  select(-(1:2)) %>%
+  gather(keyword, kw_count) %>%
+  group_by(keyword) %>%
+  summarise(kw_count = sum(kw_count, na.rm = TRUE))
+
+sf_keywordSummary <- sf_jobPostings %>%
+  select(-(1:2)) %>%
+  gather(keyword, kw_count) %>%
+  group_by(keyword) %>%
+  summarise(kw_count = sum(kw_count, na.rm = TRUE))
+Generate CSV Files
+# show table
+knitr::kable(head(jobPostings, 2), "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+knitr::kable(head(sf_jobPostings, 2), "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+# write csv
+write_csv(jobPostings, "./data/jobpostings.csv")
+write_csv(keywordSummary, "./data/keywordsummary.csv")
+write_csv(sf_jobPostings, "./data/sf_jobpostings.csv")
+write_csv(sf_keywordSummary, "./data/sf_keywordsummary.csv")
+Data Analysis
+First we imported the dataframe into R using the readLines command and stored the data in the variable “url”.
+
+url <- readLines("https://raw.githubusercontent.com/WigodskyD/data-sets/master/SF_cleanjobfiles")
+The data was then compined into one string, which made it easier to search the text for keywords located in the dataset.
+
+review_text <- paste(url, collapse=" ")
+We then used the vectorsource function which places our text into a vector, and then load the data into a variable nammed corpus.
+
+review_source <- VectorSource(review_text)
+corpus <- Corpus(review_source)
+Data Cleansing
+The data was then converted to all lower case - as to not leave out any text due to capitilization, removed any additional white space, removed stop words (the, a, etc.) and removed words we decided were not needed for our analysis. We used the tm_map function located within the “tm” (text mining) package.
+
+corpus <- tm_map(corpus, content_transformer(tolower))
+
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+corpus <- tm_map(corpus, removeWords, c("andor", "status well", "within",
+                                        "business", "learning", "field",
+                                        "span", "amp", "across", "strong", "large", "using",
+                                        "help", "clients", "class", "classresultlinkbarcontainer",
+                                        "every", "work", "can", "position", "risk", "global", "work",
+                                        "will","brbr", "resultlinkbarviewjob", "years",
+                                        "idjobsummary","div","new", "skills"))
+
+dtm <- DocumentTermMatrix(corpus)
+dtm2 <- as.matrix(dtm)
+Frequency Table
+We then created a frequency table to determine what the most used words were in the dataset (after our cleaned version).
+
+The data shows that from the entire document, the following words were used the most:
+
+frequency <- colSums(dtm2)
+frequency <- sort(frequency, decreasing=T)
+
+table <- head(frequency, 20)
+kable(table)
+x
+data	2779
+experience	1311
+team	760
+machine	700
+summary	657
+result	653
+bar	645
+link	644
+science	607
+job	509
+research	459
+analysis	445
+product	444
+analytics	390
+models	351
+rsquo	340
+engineering	338
+build	336
+ability	332
+company	330
+words <- names(frequency)
+wordcloud(words[1:100], frequency[1:100], 
+          colors=brewer.pal(8, "Dark2"))
+
+
+From the entire indeed listing for San Fransisco, It seems that the keywords: data, experience, and team are the top three skills in job listings.
+
+Manual Filtering with TM Package
+Lets filter our data some more - only looking at specific keywords that we identified from our Glassdoor Article as mentioned above. The following code will make the TM package only search for what we tell it (our Data Scientist skills):
+
+review_text <- paste(url, collapse=" ")
+
+review_source <- VectorSource(review_text)
+corpus <- Corpus(review_source)
+
+keep = c("python", "sql", "hadoop", "statistics", "tableau", "Java", "Machine",
+         "geo", "sas", "scala", "matlab", "big data", "database", "data mining",
+         "collaboration", "unsupervised", "visulization", "sra", "svm", "hdfs", "linux", "map reduce",
+         "pig", "decision forests", "phd","masters", "bachelors", "r", "c")
+We then run code similr to earlier, in order to clean our data:
+
+keepOnlyWords<-content_transformer(function(x,words) {
+  regmatches(x, 
+             gregexpr(paste0("(\\b",  paste(words, collapse = "\\b|\\b"), "\\b)"), x)
+             , invert = T) <- " "
+  x
+})
+
+corpus <- tm_map(corpus, content_transformer(tolower))
+
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, keepOnlyWords, keep)
+We then create a frequency table showing the new filtered data:
+
+dtm <- DocumentTermMatrix(corpus, control = list(wordLengths = c(1, Inf)))
+dtm2 <- as.matrix(dtm)
+
+frequency <- colSums(dtm2)
+frequency <- sort(frequency, decreasing=T)
+
+
+kable(frequency)
+x
+python	292
+statistics	252
+r	201
+data	200
+sql	183
+phd	121
+big	112
+mining	88
+hadoop	87
+c	81
+scala	58
+collaboration	49
+database	41
+sas	41
+tableau	34
+masters	31
+matlab	30
+linux	21
+pig	18
+unsupervised	15
+bachelors	8
+hdfs	6
+svm	6
+map	4
+reduce	4
+decision	2
+forests	2
+geo	1
+wf <- data.frame(word=names(frequency), frequency=frequency)
+dataset1 <- wf
+
+p <- ggplot(subset(wf, frequency>50), aes(x = reorder(word, -frequency), y = frequency)) +
+  geom_bar(stat = "identity",fill='#35a2c4') +
+  theme(axis.text.x=element_text(angle=45, hjust=1))+ theme(panel.background = element_rect(fill = '#adc8d1'))+xlab("Data Science Skills")
+p
+
+library(fpc)
+library(cluster)
+
+d <- dist(t(dtm), method="euclidian")   
+fit <- hclust(d=d, method="complete")   
+ 
+plot.new()
+plot(fit, hang=-1)
+groups <- cutree(fit, k=6)     
+rect.hclust(fit, k=6, border="red")  
+
+d <- dist(t(dtm), method="euclidian")   
+kfit <- kmeans(d, 4)   
+clusplot(as.matrix(d), kfit$cluster, color=T, shade=T, labels=2, lines=0) 
+
+Data Analysis
+Looking at the filtered data (tables and visualizations), it helps give us, as future Data Scientists, a deeper understanding of some of the top skills that are needed. It seems that Data Scientists need to know different programing languages (Python, R, SQL). Data Scientists also need to understand statistics. This is also shown in our clustering diagrams - analysis, python, statistics, data, and SQL are the most related when compared to all of the other skills.
+
+The above data looks at skills found on the West coast of the United States.
+#### Below we’re going to take a look at the skills needed on the east coast, and later compare.
+
+The approach is the same as above regarding the code, so to save space the code will only show needed outputs.
+
+The data is taken from Whiteplains, New York
+
+url <- readLines("https://raw.githubusercontent.com/nschettini/CUNY-MSDS-DATA-607/master/cleanjobfiles.txt")
+x
+data	2174
+experience	1316
+research	837
+summary	651
+bar	607
+result	607
+link	603
+team	601
+analysis	489
+job	472
+development	460
+analytics	452
+science	427
+ability	402
+including	363
+management	352
+models	345
+rsquo	342
+machine	332
+regeneron	318
+Create word cloud
+
+
+Looking at this data for the east coast, it seems the top mentioned keywords in the entire dataset are: data and experience.
+
+Lets filter this data by the same skills mentioned in our previous dataset.
+
+x
+python	185
+r	178
+statistics	176
+data	161
+sql	136
+big	101
+phd	95
+sas	81
+database	79
+hadoop	77
+mining	60
+collaboration	58
+c	57
+scala	44
+tableau	38
+matlab	26
+masters	24
+linux	23
+pig	14
+unsupervised	8
+svm	7
+bachelors	4
+hdfs	3
+geo	2
+map	2
+reduce	2
+sra	1
+
+
+Looking at the filtered data, it seems that Data Scientists need to know different programing languages, and know different programing languages (Python and R are the top mentioned). Data Scientists also need to understand statistics.
+
+This is also shown in our clustering diagrams - analysis, python, statistics, and data, are the most related when compared to all of the other skills. (Notice how SQL is less related in WP, NY than in SF, CA.)
+
+Now that we have both datasets, lets see how they compare to each other:
+Comparsion of the two datasets - White Plains, NY and San Francisco, CA by frequency of skills:
+
+compare_data <- merge(dataset1,dataset2, by.x = "word", by.y = "word")
+
+compare_data1 <- compare_data %>%
+  rename(SF = frequency.x, WP = frequency.y) %>%
+  mutate(Difference = abs(compare_data$frequency.x - compare_data$frequency.y))
+compare_data1[1:25, ] %>%
+  mutate_if(is.numeric, function(x) {
+    cell_spec(x, "html", bold = T, color = spec_color(x, end = 0.9),
+              font_size = spec_font_size(x))
+  }) %>%
+  mutate(word = cell_spec(
+    word, "html", color = "white", bold = T,
+    background = spec_color(1:10, end = 0.9, option = "A", direction = -1)
+  )) %>%
+  kable("html", escape = F, align = "c") %>%
+  kable_styling("striped", full_width = T)
+word	SF	WP	Difference
+bachelors	8	4	4
+big	112	101	11
+c	81	57	24
+collaboration	49	58	9
+data	200	161	39
+database	41	79	38
+geo	1	2	1
+hadoop	87	77	10
+hdfs	6	3	3
+linux	21	23	2
+map	4	2	2
+masters	31	24	7
+matlab	30	26	4
+mining	88	60	28
+phd	121	95	26
+pig	18	14	4
+python	292	185	107
+r	201	178	23
+reduce	4	2	2
+sas	41	81	40
+scala	58	44	14
+sql	183	136	47
+statistics	252	176	76
+svm	6	7	1
+tableau	34	38	4
+The following code reshapes data into long format using melt function from the reshape2 package. Then compare datasets from San Fransisco and White plains (west vs. east coast) by count of skills
+
+library(reshape2)
+long <- melt(compare_data, id=c("word"))
+
+ggplot(long) +
+   geom_bar(aes(x = word, y = value, fill = variable), 
+           stat="identity", position = "dodge", width = 0.7) +
+  scale_fill_manual("Result\n", values = c("red","blue"), 
+                    labels = c("SF", " WP")) +
+  labs(x="\nWord",y="Result\n") +
+  theme_bw(base_size = 12) +
+  coord_flip()
+
+Comparison of San Francisco and Whiteplains.
+Comparison of San Francisco and Whiteplains.
+
+Conclusions
+It seems that the data from San Francisco, CA has more keywords that relate to technical skills - SQL (183 vs. 136), Python (292 vs. 185), R (201 vs. 178) and want a candidate with an advanced degree: phd (121 vs. 95), masters (31 vs. 24).
+
+Looking at the entire dataset, it seems that both areas want Data Scientists with experience, data, and analysis skills.
+
+Appendix
+References
+https://cran.r-project.org/web/packages/tm/vignettes/tm.pdf
+https://cran.r-project.org/web/packages/cluster/cluster.pdf
+https://cran.r-project.org/web/packages/corpus/corpus.pdf
+https://www.glassdoor.com/research/data-scientist-personas/
+https://www.tidyverse.org/
