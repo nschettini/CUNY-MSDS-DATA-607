@@ -1,0 +1,22 @@
+---
+title: "Recommender Systems"
+author: "Nicholas Schettini"
+date: "April 17, 2018"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+
+**1. Perform a Scenario Design analysis.**
+- The target users for this recommender system are users of the steam gaming platform.  Steam is a free platform which any one can download and access content on.  Steam has a large supply of both free and paid games, along with various software tools for users to purchase as well.
+- The key goals are to target specific video game recommendations to consumers.  The system tries to find out which games the player might want to play next, or consider purchasing.  This allows them to show games that players are interested in, and in turn sell more games.
+- A data scientist can help steam accomplish these goals by analyzing the recommender data.  They can see how many games that are recommended to users are actually purchased vs. viewed vs. non-recommended games and make changes to their system if needed.
+
+**2. Attempt to reverse engineer.**
+- Steam's recommender system looks at multiple variables when trying to recommend products to the consumer.  They look at your purchase history, search history (what games you search for), games that your friends own, and games that both you and your friends have in common.  Using this information, they can recommend other games from similar generes that you and/or your friends play.  Video gamers, especially those on steam, are multi-player gamers- if you're seeing games that your friends play, you're more likely to purchase/play that game.
+
+**3. Include specific recommendations about how to improve the sites recommendation capabilities. **
+- One way to improve the recommendations is to give users an optional survey about which types of games they like this play, or would be interested in - multiplayer, action, horror, etc. type games.
+- Another way
