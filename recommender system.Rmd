@@ -19,4 +19,3 @@ output:
 
 **3. Include specific recommendations about how to improve the sites recommendation capabilities. **
 - One way to improve the recommendations is to give users an optional survey about which types of games they like this play, or would be interested in - multiplayer, action, horror, etc. type games.
-- Another way
